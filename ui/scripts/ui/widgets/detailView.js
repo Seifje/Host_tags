@@ -651,6 +651,7 @@
                 // Turn into form field
                 var selectData = $value.data('detail-view-editable-select');
                 var isBoolean = $value.data('detail-view-editable-boolean');
+                var isTokenInput = $value.data('detail-view-is-TokenInput');
                 var data = !isBoolean ? cloudStack.sanitizeReverse($value.html()) : $value.data('detail-view-boolean-value');
                 var rules = $value.data('validation-rules') ? $value.data('validation-rules') : {};
                 var isPassword = $value.data('detail-view-is-password');
@@ -688,6 +689,45 @@
                             checked: data
                         })
                     );
+                } else if (isTokenInput) { // jquery.tokeninput.js
+                    function to_json_array(str) {
+                        var simple_array = str.split(",");
+                        var json_array = [];
+
+                        $.each(simple_array, function(index, value) {
+                            var obj = {
+                                          id : value,
+                                          name : value
+                                      };
+
+                            json_array.push(obj);
+                        });
+
+                        return json_array;
+                    }
+
+                    var existing_tags = to_json_array(data);
+
+                    isAsync = true;
+                    selectArgs = {
+                                     context: $detailView.data('view-args').context,
+                                     response: {
+                                                   success: function(args) {
+                                                       $input.tokenInput(args, { theme: "facebook",
+                                                                                 preventDuplicates: true,
+                                                                                 prePopulate : existing_tags,
+                                                                                 processPrePopulate:true });
+                                                   }
+                                     }
+                    };
+
+                    $input = $('<input>').attr({
+                        name: name,
+                        type: 'text',
+                        value : data
+                    }).appendTo($value);
+
+                    $value.data('value_token').dataProvider(selectArgs);
                 } else {
                     // Text input
                     $value.append(
@@ -1034,9 +1074,20 @@
 
                 // Set up editable metadata
                 if (typeof(value.isEditable) == 'function')
+                {
                     $value.data('detail-view-is-editable', value.isEditable(context));
-                else //typeof(value.isEditable) == 'boolean' or 'undefined'
+                }
+                else // typeof(value.isEditable) == 'boolean' or 'undefined'
+                {
                     $value.data('detail-view-is-editable', value.isEditable);
+
+                    if (value.isTokenInput)
+                    {
+                         $value.data('detail-view-is-TokenInput', true);
+                         $value.data('value_token', value);
+                    }
+                }
+
                 if (value.select) {
                     value.selected = $value.html();
 
